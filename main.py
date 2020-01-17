@@ -16,8 +16,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten, concatenate
 from tensorflow.keras.layers import Conv2D, MaxPooling2D
 from tensorflow.keras.models import Model
-
-from sklearn.model_selection import train_test_split
+from tensorflow.keras.optimizers import Adam
 
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -27,7 +26,7 @@ for gpu in gpus:
 
 
 #useful constant
-img_rows, img_cols, img_depth = 256, 256, 3
+img_rows, img_cols, img_depth = 128, 128, 3
 input_shape = (img_rows, img_cols, img_depth)
 
 batch_size = 128
@@ -102,37 +101,44 @@ y_test = y[test_indeces]
 print("Dataset splitted in train+test correctly")
 
 cnn = Sequential()
-cnn.add(Conv2D(16, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape,
-                 ))
-cnn.add(Conv2D(16, (3, 3), activation='relu'))
-cnn.add(MaxPooling2D(pool_size=(2, 2)))
-#cnn.add(Dropout(0.1))
-
 
 cnn.add(Conv2D(32, kernel_size=(3, 3),
                  activation='relu',
                  input_shape=input_shape,
                  ))
-cnn.add(Conv2D(32,  (3, 3), activation='relu'))
+cnn.add(Conv2D(32, (3, 3), activation='relu'))
+cnn.add(Conv2D(32, (3, 3), activation='relu'))
 cnn.add(MaxPooling2D(pool_size=(2, 2)))
-#cnn.add(Dropout(0.1))
 
-cnn.add(Conv2D(64, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape,
-                 ))
+
+cnn.add(Conv2D(64,(3, 3),
+                 activation='elu'))
+cnn.add(Conv2D(64, (3, 3), activation='relu'))
 cnn.add(Conv2D(64, (3, 3), activation='relu'))
 cnn.add(MaxPooling2D(pool_size=(2, 2)))
-#cnn.add(Dropout(0.1))
+
+
+
+cnn.add(Conv2D(64, (3, 3),
+                 activation='relu'))
+cnn.add(Conv2D(64, (3, 3), activation='relu'))
+cnn.add(Conv2D(64, (3, 3), activation='relu'))
+cnn.add(MaxPooling2D(pool_size=(2, 2)))
+
+cnn.add(Conv2D(128, (3, 3),
+                 activation='relu'))
+cnn.add(Conv2D(128, (3, 3), activation='relu'))
+cnn.add(Conv2D(128, (3, 3), activation='relu'))
+cnn.add(MaxPooling2D(pool_size=(2, 2)))
 
 
 cnn.add(Flatten())
-cnn.add(Dense(1024, activation='relu'))
+cnn.add(Dense(4096, activation='relu'))
 cnn.add(Dropout(0.5))
-cnn.add(Dense(512, activation='relu'))
-cnn.add(Dropout(0.25))
+cnn.add(Dense(4096, activation='relu'))
+cnn.add(Dropout(0.5))
+cnn.add(Dense(1000, activation='relu'))
+cnn.add(Dropout(0.5))
 cnn.add(Dense(num_classes, activation='softmax'))
 
 
@@ -144,6 +150,8 @@ fnn = tf.keras.models.Sequential([
   tf.keras.layers.Dropout(0.2),
   tf.keras.layers.Dense(num_classes, activation='softmax')
 ])
+
+'''
 
 fnn.compile(loss='binary_crossentropy',
               optimizer='adam',
@@ -171,7 +179,7 @@ model_hist = cnn.fit(
   batch_size=1)
 
 
-
+'''
 
 combinedInput = concatenate([fnn.output, cnn.output])
 
@@ -194,12 +202,16 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
                                                  verbose=1)
 
 
+opt = Adam(learning_rate = 0.00001, amsgrad=True)
+
 model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
 
 
+class_weight = {0: 1.6,
+                1: 1.0}
 
 model_hist = model.fit(
   [patients_data_train, X_train],
@@ -207,7 +219,8 @@ model_hist = model.fit(
   validation_data=([patients_data_test, X_test], y_test),
   epochs=5,
   batch_size=1,
-  callbacks=[cp_callback])
+  callbacks=[cp_callback],
+  class_weight=class_weight)
 
 # Compile the model
 # Train the model
