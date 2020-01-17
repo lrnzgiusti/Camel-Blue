@@ -29,7 +29,7 @@ for gpu in gpus:
 
 
 # %%useful constants
-img_rows, img_cols, img_depth = 64, 64, 3
+img_rows, img_cols, img_depth = 75, 75, 3
 input_shape = (img_rows, img_cols, img_depth)
 
 batch_size = 128
@@ -124,21 +124,23 @@ opt = Adam(learning_rate = 0.00006, amsgrad=True)
 
 cnn = Sequential()
 
-cnn.add(Conv2D(64, (3, 3), activation='relu', input_shape=input_shape))
+cnn.add(Conv2D(64, (3, 3), activation='relu', input_shape=input_shape, kernel_regularizer=l1_l2(0, 0.03)))
+cnn.add(Dropout(0.1))
 #cnn.add(Conv2D(64, (3, 3), activation='relu'))
 cnn.add(MaxPooling2D(pool_size=(2, 2)))
 
-cnn.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+cnn.add(Conv2D(16, (3, 3), activation='relu',  kernel_regularizer=l1_l2(0, 0.03)))
+cnn.add(Dropout(0.1))
 #cnn.add(Conv2D(32, (3, 3), activation='relu'))
 cnn.add(MaxPooling2D(pool_size=(2, 2)))
 
 
 
 cnn.add(Flatten())
-cnn.add(Dense(32, activation='relu'))
-cnn.add(Dropout(0.3))
-cnn.add(Dense(16, activation='relu'))
-cnn.add(Dropout(0.3))
+cnn.add(Dense(8, activation='relu'))
+cnn.add(Dropout(0.03))
+cnn.add(Dense(8, activation='relu'))
+cnn.add(Dropout(0.03))
 cnn.add(Dense(num_classes, activation='softmax'))
 
 '''
@@ -158,10 +160,10 @@ model_hist = cnn.fit(
 
 
 fnn = Sequential()
-fnn.add(Dense(32, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=l1_l2(0.003, 0.003)))
-fnn.add(Dropout(0.2))
-fnn.add(Dense(32, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=l1_l2(0.003, 0.003)))
-fnn.add(Dropout(0.2))
+fnn.add(Dense(16, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=l1_l2(0.003, 0.006)))
+fnn.add(Dropout(0.05))
+fnn.add(Dense(8, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=l1_l2(0.003, 0.006)))
+fnn.add(Dropout(0.05))
 fnn.add(Dense(num_classes, activation='softmax'))
 
 
@@ -183,7 +185,7 @@ model_hist = fnn.fit(
 
 combinedInput = concatenate([fnn.output, cnn.output])
 
-x = Dense(16, activation="relu")(combinedInput)
+x = Dense(8, activation="relu", kernel_regularizer=l1_l2(0.003, 0.003))(combinedInput)
 x = Dense(num_classes, activation="softmax")(x)
 
 
@@ -205,7 +207,7 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
 # %% Compile the model
 
 
-opt = Adam(learning_rate = 0.0006, amsgrad=True)
+opt = Adam(learning_rate = 0.0001, amsgrad=True)
 
 model.compile(loss='binary_crossentropy',
               optimizer=opt,
@@ -217,7 +219,7 @@ model_hist = model.fit(
   y_train,
   validation_data=([X_valid, valid_images], y_valid),
   epochs=550,
-  batch_size=128,
+  batch_size=16,
   callbacks=[cp_callback])
 
 # %% Evaluate the performances
